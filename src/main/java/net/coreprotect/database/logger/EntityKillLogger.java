@@ -24,7 +24,8 @@ public class EntityKillLogger {
         throw new IllegalStateException("Database class");
     }
 
-    public static void log(PreparedStatement preparedStmt, PreparedStatement preparedStmt2, int batchCount, String user, BlockState block, List<Object> data, int type) {
+    public static void log(PreparedStatement preparedStmt, PreparedStatement preparedStmt2, int batchCount, String user,
+            BlockState block, List<Object> data, int type) {
         try {
             if (ConfigHandler.blacklist.get(user.toLowerCase(Locale.ROOT)) != null) {
                 return;
@@ -49,20 +50,25 @@ public class EntityKillLogger {
 
             ResultSet resultSet = EntityStatement.insert(preparedStmt2, time, data);
             if (Database.hasReturningKeys()) {
-                resultSet.next();
-                entity_key = resultSet.getInt(1);
-                resultSet.close();
-            }
-            else {
+                if (resultSet != null && resultSet.next()) { // Verifique se não é nulo antes de usar
+                    entity_key = resultSet.getInt(1);
+                    resultSet.close();
+                } else {
+                    System.err.println("ResultSet is null or empty. Could not retrieve keys.");
+                }
+            } else {
                 ResultSet keys = preparedStmt2.getGeneratedKeys();
-                keys.next();
-                entity_key = keys.getInt(1);
-                keys.close();
+                if (keys != null && keys.next()) {
+                    entity_key = keys.getInt(1);
+                    keys.close();
+                } else {
+                    System.err.println("Generated keys are null or empty.");
+                }
             }
 
-            BlockStatement.insert(preparedStmt, batchCount, time, userId, wid, x, y, z, type, entity_key, null, null, 3, 0);
-        }
-        catch (Exception e) {
+            BlockStatement.insert(preparedStmt, batchCount, time, userId, wid, x, y, z, type, entity_key, null, null, 3,
+                    0);
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
